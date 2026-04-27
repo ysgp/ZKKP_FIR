@@ -3,127 +3,118 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DPRK AIP — Pro Chart Viewer</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+<title>DPRK AIP — ChartFox Style Viewer</title>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600&family=Orbitron:wght@700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #090c10;
-    --sidebar: #0d1117;
-    --list-bg: #12161d;
-    --border: #30363d;
-    --accent: #58a6ff;
-    --text: #c9d1d9;
-    --muted: #8b949e;
+    --bg: #0b0e14;
+    --sidebar: #12171f;
+    --list-bg: #161c27;
+    --border: #242d3c;
+    --accent: #00d4ff;
+    --text: #c8dde8;
+    --muted: #5a7a8a;
   }
 
   body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text); font-family: 'Rajdhani', sans-serif; overflow: hidden; }
 
+  /* ── Layout ── */
   .app-container { display: flex; height: 100vh; flex-direction: column; }
   
   header {
-    height: 45px; background: #161b22; border-bottom: 1px solid var(--border);
+    height: 50px; background: #060a0f; border-bottom: 1px solid var(--border);
     display: flex; align-items: center; padding: 0 20px; justify-content: space-between; flex-shrink: 0;
   }
-  .logo { font-family: 'Orbitron'; font-size: 0.8rem; color: var(--accent); letter-spacing: 1.5px; }
+  .logo { font-family: 'Orbitron'; font-size: 0.9rem; color: var(--accent); letter-spacing: 2px; }
 
   .main-content { display: flex; flex: 1; overflow: hidden; }
 
-  /* Sidebar */
-  aside { width: 200px; background: var(--sidebar); border-right: 1px solid var(--border); overflow-y: auto; }
-  .fir-item { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid var(--border); font-size: 0.8rem; font-weight: 600; color: var(--muted); }
-  .fir-item.active { color: var(--accent); background: rgba(88,166,255,0.1); border-left: 2px solid var(--accent); }
+  /* ── Sidebar (FIRs) ── */
+  aside { width: 220px; background: var(--sidebar); border-right: 1px solid var(--border); overflow-y: auto; }
+  .fir-item { padding: 12px 20px; cursor: pointer; border-bottom: 1px solid var(--border); font-size: 0.85rem; font-weight: 600; color: var(--muted); }
+  .fir-item:hover { background: rgba(255,255,255,0.05); }
+  .fir-item.active { color: var(--accent); background: rgba(0,212,255,0.05); border-left: 3px solid var(--accent); }
 
-  /* Chart List */
-  .chart-list-panel { width: 280px; background: var(--list-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
-  .list-header { padding: 12px; font-size: 0.7rem; font-family: 'Share Tech Mono'; color: var(--muted); background: rgba(0,0,0,0.2); }
+  /* ── List Area (Chart List) ── */
+  .chart-list-panel { width: 300px; background: var(--list-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+  .list-header { padding: 15px; font-size: 0.7rem; font-family: 'Share Tech Mono'; color: var(--muted); border-bottom: 1px solid var(--border); }
   .chart-items-container { flex: 1; overflow-y: auto; }
-  .chart-item { padding: 12px; border-bottom: 1px solid var(--border); cursor: pointer; transition: 0.2s; }
+  .chart-item { 
+    padding: 15px; border-bottom: 1px solid var(--border); cursor: pointer; transition: 0.2s;
+    display: flex; flex-direction: column; gap: 5px;
+  }
   .chart-item:hover { background: rgba(255,255,255,0.03); }
-  .chart-item.active { background: #1c2128; border-right: 3px solid var(--accent); }
-  .chart-label { font-size: 0.8rem; font-weight: 600; margin-top: 4px; }
-  .type-tag { font-size: 0.6rem; padding: 1px 4px; border-radius: 3px; background: #30363d; color: var(--accent); font-family: 'Share Tech Mono'; }
+  .chart-item.active { background: #1a2332; border-right: 3px solid var(--accent); }
+  .chart-label { font-size: 0.85rem; font-weight: 600; line-height: 1.3; }
+  .chart-meta { font-size: 0.65rem; font-family: 'Share Tech Mono'; color: var(--muted); display: flex; gap: 8px; }
+  .type-tag { padding: 2px 5px; border-radius: 3px; background: #242d3c; color: #fff; font-size: 0.55rem; }
 
-  /* ── Interactive Viewer ── */
-  .viewer-panel { 
-    flex: 1; background: #000; position: relative; overflow: hidden; 
-    cursor: grab; display: flex; align-items: center; justify-content: center;
+  /* ── Viewer Area ── */
+  .viewer-panel { flex: 1; background: #000; position: relative; display: flex; flex-direction: column; }
+  iframe { width: 100%; height: 100%; border: none; }
+  
+  .viewer-placeholder {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--muted); font-family: 'Share Tech Mono'; flex-direction: column; gap: 10px;
   }
-  .viewer-panel:active { cursor: grabbing; }
 
-  #canvas-container { position: absolute; transform-origin: 0 0; will-change: transform; }
-  canvas { display: block; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
-
-  .controls {
-    position: absolute; bottom: 20px; right: 20px; display: flex; gap: 10px; z-index: 100;
-  }
-  .btn-tool {
-    background: rgba(48, 54, 61, 0.8); border: 1px solid var(--border); color: #fff;
-    width: 40px; height: 40px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-    backdrop-filter: blur(5px);
-  }
-  .btn-tool:hover { background: var(--accent); }
-
-  .loading-overlay {
-    position: absolute; inset: 0; background: rgba(0,0,0,0.7); display: none;
-    align-items: center; justify-content: center; font-family: 'Share Tech Mono'; color: var(--accent);
-  }
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); }
 </style>
 </head>
 <body>
 
 <div class="app-container">
   <header>
-    <div class="logo">DPRK AIP // NAV-VIEWER</div>
-    <div id="zoom-display" style="font-family:'Share Tech Mono'; font-size:0.7rem; color: var(--muted)">ZOOM: 100%</div>
+    <div class="logo">DPRK AIP // CHARTS</div>
+    <div style="font-family:'Share Tech Mono'; font-size:0.7rem; color: var(--muted)">AIRAC 2026 ONLINE</div>
   </header>
 
   <div class="main-content">
     <aside id="fir-list"></aside>
+
     <div class="chart-list-panel">
-      <div class="list-header" id="list-title">CHARTS</div>
+      <div class="list-header" id="list-title">SELECT A FIR</div>
       <div class="chart-items-container" id="chart-items"></div>
     </div>
-    <div class="viewer-panel" id="viewer-viewport">
-      <div id="canvas-container">
-        <canvas id="pdf-canvas"></canvas>
+
+    <div class="viewer-panel">
+      <div class="viewer-placeholder" id="placeholder">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+        SELECT A CHART TO PREVIEW
       </div>
-      <div class="loading-overlay" id="loader">RENDERING...</div>
-      <div class="controls">
-        <button class="btn-tool" onclick="resetZoom()">⟲</button>
-        <button class="btn-tool" onclick="adjustZoom(1.2)">+</button>
-        <button class="btn-tool" onclick="adjustZoom(0.8)">-</button>
-      </div>
+      <iframe id="pdf-viewer" src="about:blank" style="display: none;"></iframe>
     </div>
   </div>
 </div>
 
 <script>
-// 初始化 PDF.js
-const pdfjsLib = window['pdfjs-dist/build/pdf'];
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
-
 const CHARTS = {
-  ZKKP: [{ file: 'ZKKP ENR.pdf', label: 'PYONGYANG ENROUTE RNAV', type: 'ENR' }],
+  ZKKP: [
+    { file: 'ZKKP ENR.pdf', label: 'PYONGYANG ENROUTE RNAV', type: 'ENR' },
+    { file: 'ZK ENROUTE RNAV - 시트1.pdf', label: 'ENROUTE RNAV - SHEET 1', type: 'ENR' },
+    { file: 'ZK ENROUTE CONVENTIONAL - 시트1.p', label: 'ENROUTE CONVENTIONAL', type: 'ENR' }
+  ],
   ZKPY: [
     { file: 'ZKPY-AD-CHART.pdf', label: 'AD CHART', type: 'AD' },
-    { file: 'ZKPY-SID-CHART.pdf', label: 'SID CHART', type: 'SID' },
-    { file: 'ZKPY-ILS 35.pdf', label: 'ILS/DME RWY 35', type: 'APP' }
+    { file: 'ZKPY-ACFT PARK_DOCKING-CHART.pdf', label: 'ACFT PARKING / DOCKING', type: 'GND' },
+    { file: 'ZKPY-SID-CHART.pdf', label: 'STANDARD DEPARTURE (SID)', type: 'SID' },
+    { file: 'ZKPY-STAR-CHART.pdf', label: 'STANDARD ARRIVAL (STAR)', type: 'STAR' },
+    { file: 'ZKPY-ILS 35.pdf', label: 'ILS/DME RWY 35', type: 'APP' },
+    { file: 'ZKPY-ILS DME 17.pdf', label: 'ILS/DME RWY 17', type: 'APP' },
+    { file: 'ZKPY-RNP 35.pdf', label: 'RNP RWY 35', type: 'APP' },
+    { file: 'ZKPY-RNP 17.pdf', label: 'RNP RWY 17', type: 'APP' }
   ],
-  ZKWS: [{ file: 'ZKWS-AD-CHART.pdf', label: 'AD CHART', type: 'AD' }]
+  ZKWS: [
+    { file: 'ZKWS-AD-CHART.pdf', label: 'AD CHART', type: 'AD' },
+    { file: 'ZKWS-SID-CHART.pdf', label: 'STANDARD DEPARTURE (SID)', type: 'SID' },
+    { file: 'ZKWS-STAR-CHART.pdf', label: 'STANDARD ARRIVAL (STAR)', type: 'STAR' },
+    { file: 'ZKWS-APPROACH-ILS-CHART.pdf', label: 'ILS APPROACH', type: 'APP' }
+  ]
 };
 
-let currentPDF = null;
-let scale = 1.0;
-let translateX = 0;
-let translateY = 0;
-let isDragging = false;
-let startX, startY;
-
-const viewport = document.getElementById('viewer-viewport');
-const container = document.getElementById('canvas-container');
-const canvas = document.getElementById('pdf-canvas');
-const ctx = canvas.getContext('2d');
+const FIR_NAMES = { ZKKP: 'PYONGYANG FIR', ZKPY: 'SUNAN INTL', ZKWS: 'WONSAN KALMA' };
 
 function init() {
   const firList = document.getElementById('fir-list');
@@ -131,109 +122,45 @@ function init() {
     const div = document.createElement('div');
     div.className = 'fir-item';
     div.id = `fir-${fir}`;
-    div.innerHTML = `<div style="font-size:0.5rem; opacity:0.5">${fir}</div>${fir === 'ZKKP' ? 'PYONGYANG FIR' : (fir === 'ZKPY' ? 'SUNAN' : 'WONSAN')}`;
+    div.innerHTML = `<div style="font-size:0.6rem; opacity:0.6">${fir}</div>${FIR_NAMES[fir]}`;
     div.onclick = () => selectFIR(fir);
     firList.appendChild(div);
   });
-  selectFIR('ZKPY');
-  setupInteractions();
-}
-
-async function renderPDF(file) {
-  document.getElementById('loader').style.display = 'flex';
-  try {
-    const loadingTask = pdfjsLib.getDocument(encodeURIComponent(file));
-    const pdf = await loadingTask.promise;
-    const page = await pdf.getPage(1);
-    
-    // 高清渲染設定
-    const pixelRatio = window.devicePixelRatio || 1;
-    const originalViewport = page.getViewport({ scale: 2.0 }); // 初始渲染 2 倍大以保證縮放後的清晰度
-    
-    canvas.height = originalViewport.height;
-    canvas.width = originalViewport.width;
-    
-    const renderContext = { canvasContext: ctx, viewport: originalViewport };
-    await page.render(renderContext).promise;
-    
-    resetZoom();
-    document.getElementById('loader').style.display = 'none';
-  } catch (e) {
-    console.error(e);
-    alert("無法載入 PDF: " + file);
-  }
-}
-
-function updateTransform() {
-  container.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
-  document.getElementById('zoom-display').textContent = `ZOOM: ${Math.round(scale * 100)}%`;
-}
-
-function setupInteractions() {
-  // 滾輪縮放
-  viewport.addEventListener('wheel', e => {
-    e.preventDefault();
-    const zoomSpeed = 0.1;
-    const delta = e.deltaY > 0 ? -zoomSpeed : zoomSpeed;
-    const oldScale = scale;
-    scale = Math.min(Math.max(0.2, scale + delta), 5);
-
-    // 以滑鼠位置為中心縮放 (簡單邏輯)
-    const rect = viewport.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-    
-    translateX -= (mouseX - translateX) * (scale / oldScale - 1);
-    translateY -= (mouseY - translateY) * (scale / oldScale - 1);
-    
-    updateTransform();
-  }, { passive: false });
-
-  // 滑鼠拖動
-  viewport.addEventListener('mousedown', e => {
-    isDragging = true;
-    startX = e.clientX - translateX;
-    startY = e.clientY - translateY;
-  });
-
-  window.addEventListener('mousemove', e => {
-    if (!isDragging) return;
-    translateX = e.clientX - startX;
-    translateY = e.clientY - startY;
-    updateTransform();
-  });
-
-  window.addEventListener('mouseup', () => isDragging = false);
-}
-
-function adjustZoom(factor) {
-  scale *= factor;
-  updateTransform();
-}
-
-function resetZoom() {
-  scale = 0.5; // 初始比例
-  translateX = (viewport.clientWidth - canvas.width * scale) / 2;
-  translateY = 20;
-  updateTransform();
+  selectFIR('ZKPY'); // 預設開啟平壤
 }
 
 function selectFIR(fir) {
   document.querySelectorAll('.fir-item').forEach(el => el.classList.remove('active'));
   document.getElementById(`fir-${fir}`).classList.add('active');
-  const itemsContainer = document.getElementById('chart-items');
-  itemsContainer.innerHTML = '';
-  CHARTS[fir].forEach(chart => {
+  document.getElementById('list-title').textContent = `${fir} — ${CHARTS[fir].length} CHARTS`;
+  
+  const container = document.getElementById('chart-items');
+  container.innerHTML = '';
+  
+  CHARTS[fir].forEach((chart, idx) => {
     const item = document.createElement('div');
     item.className = 'chart-item';
-    item.innerHTML = `<span class="type-tag">${chart.type}</span><div class="chart-label">${chart.label}</div>`;
-    item.onclick = () => {
-      document.querySelectorAll('.chart-item').forEach(el => el.classList.remove('active'));
-      item.classList.add('active');
-      renderPDF(chart.file);
-    };
-    itemsContainer.appendChild(item);
+    item.id = `chart-${idx}`;
+    item.innerHTML = `
+      <div class="chart-meta"><span class="type-tag">${chart.type}</span> <span>${chart.file}</span></div>
+      <div class="chart-label">${chart.label}</div>
+    `;
+    item.onclick = () => loadChart(chart, item);
+    container.appendChild(item);
   });
+}
+
+function loadChart(chart, element) {
+  document.querySelectorAll('.chart-item').forEach(el => el.classList.remove('active'));
+  element.classList.add('active');
+  
+  const iframe = document.getElementById('pdf-viewer');
+  const placeholder = document.getElementById('placeholder');
+  
+  placeholder.style.display = 'none';
+  iframe.style.display = 'block';
+  // 加上 #view=FitH 讓 PDF 自動符合寬度（直式閱讀優化）
+  iframe.src = encodeURIComponent(chart.file) + '#view=FitH';
 }
 
 init();
